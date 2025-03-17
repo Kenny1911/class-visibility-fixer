@@ -70,7 +70,7 @@ final class ClassVisibilityFixer extends AbstractFixer implements ConfigurableFi
             ) {
                 $tokens[$docCommentIndex] = new Token([
                     T_DOC_COMMENT,
-                    mb_substr($docCommentToken->getContent(), 0, -3).$apiOrInternalDocComment."\n */",
+                    sprintf("%s *\n%s\n */", mb_substr($docCommentToken->getContent(), 0, -3), $apiOrInternalDocComment),
                 ]);
             }
         }

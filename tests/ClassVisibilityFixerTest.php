@@ -372,6 +372,14 @@ final class ClassVisibilityFixerTest extends TestCase
              * @psalm-internal Some\Namespace
              */
             class Qux {}
+
+            /**
+             * Quux class description.
+             *
+             * @internal
+             * @psalm-internal Some\Namespace
+             */
+            final readonly class Quux {}
             PHP,
             <<<PHP
             namespace Some\Namespace;
@@ -396,6 +404,11 @@ final class ClassVisibilityFixerTest extends TestCase
              * @psalm-internal Some\Namespace
              */
             class Qux {}
+
+            /**
+             * Quux class description.
+             */
+            final readonly class Quux {}
             PHP,
             [],
         );
