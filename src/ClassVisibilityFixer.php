@@ -41,6 +41,15 @@ final class ClassVisibilityFixer extends AbstractFixer implements ConfigurableFi
         while (null !== ($classIndex = $tokens->getNextTokenOfKind($index, [[T_CLASS], [T_INTERFACE], [T_TRAIT], [T_ENUM]]))) {
             $index = $classIndex;
 
+            while (null !== ($prevIndex = $tokens->getPrevNonWhitespace($classIndex))) {
+                if (in_array($tokens[$prevIndex]->getId(), [T_READONLY, T_ABSTRACT, T_FINAL], true)) {
+                    $classIndex = $prevIndex;
+                    continue;
+                }
+
+                break;
+            }
+
             $docCommentIndex = $tokens->getPrevNonWhitespace($classIndex);
             $docCommentToken = null !== $docCommentIndex && $tokens[$docCommentIndex]->isGivenKind(T_DOC_COMMENT) ? $tokens[$docCommentIndex] : null;
             $apiOrInternalDocComment = $this->apiOrInternalDocComment($tokens, $classIndex);
@@ -52,6 +61,7 @@ final class ClassVisibilityFixer extends AbstractFixer implements ConfigurableFi
             if (null === $docCommentToken) {
                 // If no doc-comment
                 $tokens->insertAt($classIndex, new Token([T_DOC_COMMENT, "/**\n$apiOrInternalDocComment\n */\n"]));
+                $index += 1;
             } elseif (
                 // If doc-comment not contains @api, @internal or @psalm-internal
                 false === str_contains($docCommentToken->getContent(), '@api')
@@ -69,7 +79,7 @@ final class ClassVisibilityFixer extends AbstractFixer implements ConfigurableFi
     protected function createConfigurationDefinition(): FixerConfigurationResolverInterface
     {
         return new FixerConfigurationResolver([
-            (new FixerOptionBuilder('visibility', 'Default class visibility.'))
+            (new FixerOptionBuilder('defaultVisibility', 'Default class visibility.'))
                 ->setAllowedValues(['api', 'internal', 'psalm-internal', 'internal+psalm-internal'])
                 ->setDefault('internal+psalm-internal')
                 ->getOption(),
@@ -78,14 +88,26 @@ final class ClassVisibilityFixer extends AbstractFixer implements ConfigurableFi
 
     private function apiOrInternalDocComment(Tokens $tokens, int $classIndex): string
     {
-        $visibility = $this->configuration['visibility'] ?? 'internal+psalm-internal';
+        $visibility = $this->configuration['defaultVisibility'] ?? 'internal+psalm-internal';
 
         return match ($visibility) {
             'api' => ' * @api',
             'internal' => ' * @internal',
-            'psalm-internal' => ' * @psalm-iternal '.$this->getClassNamespace($tokens, $classIndex),
-            'internal+psalm-internal' => " * @internal\n * @psalm-iternal ".$this->getClassNamespace($tokens, $classIndex),
+            'psalm-internal' => ' * '.$this->psalmInternalDocComment($tokens, $classIndex),
+            'internal+psalm-internal' => " * @internal\n * ".$this->psalmInternalDocComment($tokens, $classIndex),
         };
+    }
+
+    private function psalmInternalDocComment(Tokens $tokens, int $classIndex): string
+    {
+        $docComment = '@psalm-internal';
+        $classNamespace = $this->getClassNamespace($tokens, $classIndex);
+
+        if (null !== $classNamespace) {
+            $docComment .= ' '.$classNamespace;
+        }
+
+        return $docComment;
     }
 
     private function getClassNamespace(Tokens $tokens, int $classIndex): ?string
@@ -114,6 +136,12 @@ final class ClassVisibilityFixer extends AbstractFixer implements ConfigurableFi
                 break;
             }
 
+            return null;
+        }
+
+        $namespace = trim($namespace);
+
+        if ('' === $namespace) {
             return null;
         }
 
