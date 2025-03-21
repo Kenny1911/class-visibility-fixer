@@ -12,6 +12,7 @@ use PhpCsFixer\FixerConfiguration\FixerConfigurationResolverInterface;
 use PhpCsFixer\FixerConfiguration\FixerOptionBuilder;
 use PhpCsFixer\FixerDefinition\FixerDefinition;
 use PhpCsFixer\FixerDefinition\FixerDefinitionInterface;
+use PhpCsFixer\Tokenizer\CT;
 use PhpCsFixer\Tokenizer\Token;
 use PhpCsFixer\Tokenizer\Tokens;
 
@@ -41,6 +42,7 @@ final class ClassVisibilityFixer extends AbstractFixer implements ConfigurableFi
         while (null !== ($classIndex = $tokens->getNextTokenOfKind($index, [[T_CLASS], [T_INTERFACE], [T_TRAIT], [T_ENUM]]))) {
             $index = $classIndex;
 
+            // Get position index before abstract, final and readonly keywords
             while (null !== ($prevIndex = $tokens->getPrevNonWhitespace($classIndex))) {
                 if (in_array($tokens[$prevIndex]->getId(), [T_READONLY, T_ABSTRACT, T_FINAL], true)) {
                     $classIndex = $prevIndex;
@@ -50,6 +52,23 @@ final class ClassVisibilityFixer extends AbstractFixer implements ConfigurableFi
                 break;
             }
 
+            // Get position index before class attributes
+            while (null !== ($prevIndex = $tokens->getPrevNonWhitespace($classIndex))) {
+                if ($tokens[$prevIndex]->getId() === CT::T_ATTRIBUTE_CLOSE) {
+                    $attributeIndex = $tokens->getPrevTokenOfKind($prevIndex, [[T_ATTRIBUTE]]);
+
+                    if (null === $attributeIndex) {
+                        break;
+                    }
+
+                    $classIndex = $attributeIndex;
+                    continue;
+                }
+
+                break;
+            }
+
+            // Get position index of class doc-block
             $docCommentIndex = $tokens->getPrevNonWhitespace($classIndex);
             $docCommentToken = null !== $docCommentIndex && $tokens[$docCommentIndex]->isGivenKind(T_DOC_COMMENT) ? $tokens[$docCommentIndex] : null;
             $apiOrInternalDocComment = $this->apiOrInternalDocComment($tokens, $classIndex);
