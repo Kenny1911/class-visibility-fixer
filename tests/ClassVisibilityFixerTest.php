@@ -414,6 +414,156 @@ final class ClassVisibilityFixerTest extends TestCase
         );
     }
 
+    public function testClassHasAttribute(): void
+    {
+        $this->doTest(
+            <<<PHP
+            namespace Some\Namespace;
+
+            /**
+             * @internal
+             * @psalm-internal Some\Namespace
+             */
+            #[FooAttr('bar', 'baz')]
+            class Foo {}
+            PHP,
+            <<<PHP
+            namespace Some\Namespace;
+
+            #[FooAttr('bar', 'baz')]
+            class Foo {}
+            PHP,
+            [],
+        );
+    }
+
+    public function testClassHasMultilineAttribute(): void
+    {
+        $this->doTest(
+            <<<PHP
+            namespace Some\Namespace;
+
+            /**
+             * @internal
+             * @psalm-internal Some\Namespace
+             */
+            #[FooAttr(
+                bar: 'bar',
+                baz: 'baz',
+            )]
+            class Foo {}
+            PHP,
+            <<<PHP
+            namespace Some\Namespace;
+
+            #[FooAttr(
+                bar: 'bar',
+                baz: 'baz',
+            )]
+            class Foo {}
+            PHP,
+            [],
+        );
+    }
+
+    public function testClassHasManyAttributes(): void
+    {
+        $this->doTest(
+            <<<PHP
+            namespace Some\Namespace;
+
+            /**
+             * @internal
+             * @psalm-internal Some\Namespace
+             */
+            #[FooAttr('bar', 'baz')]
+            #[BarAttr]
+            class Foo {}
+            PHP,
+            <<<PHP
+            namespace Some\Namespace;
+
+            #[FooAttr('bar', 'baz')]
+            #[BarAttr]
+            class Foo {}
+            PHP,
+            [],
+        );
+    }
+
+    public function testClassHasManyAttributes2(): void
+    {
+        $this->doTest(
+            <<<PHP
+            namespace Some\Namespace;
+
+            /**
+             * @internal
+             * @psalm-internal Some\Namespace
+             */
+            #[FooAttr('bar', 'baz')]
+            #[BarAttr]
+            #[
+                Baz(
+                    date: new \DateTimeImmutable()
+                ),
+                Baz(
+                    date: new \DateTimeImmutable()
+                ),
+            ]
+            #[Qux1, Qux2]
+            #[Qux\Quxx]
+            class Foo {}
+            PHP,
+            <<<PHP
+            namespace Some\Namespace;
+
+            #[FooAttr('bar', 'baz')]
+            #[BarAttr]
+            #[
+                Baz(
+                    date: new \DateTimeImmutable()
+                ),
+                Baz(
+                    date: new \DateTimeImmutable()
+                ),
+            ]
+            #[Qux1, Qux2]
+            #[Qux\Quxx]
+            class Foo {}
+            PHP,
+            [],
+        );
+    }
+
+    public function testClassHasAttributeAndDocBlock(): void
+    {
+        $this->doTest(
+            <<<PHP
+            namespace Some\Namespace;
+
+            /**
+             * @author Kenny1911 <o-muzyka@mail.ru>
+             *
+             * @internal
+             * @psalm-internal Some\Namespace
+             */
+            #[FooAttr('bar', 'baz')]
+            class Foo {}
+            PHP,
+            <<<PHP
+            namespace Some\Namespace;
+
+            /**
+             * @author Kenny1911 <o-muzyka@mail.ru>
+             */
+            #[FooAttr('bar', 'baz')]
+            class Foo {}
+            PHP,
+            [],
+        );
+    }
+
     /**
      * @param non-empty-string $expected
      * @param non-empty-string $code
