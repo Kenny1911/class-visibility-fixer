@@ -52,6 +52,14 @@ final class ClassVisibilityFixer extends AbstractFixer implements ConfigurableFi
                 break;
             }
 
+            // Skip fix for anonymous class
+            if (
+                null !== ($prevIndex = $tokens->getPrevNonWhitespace($classIndex))
+                && T_NEW === $tokens[$prevIndex]->getId()
+            ) {
+                continue;
+            }
+
             // Get position index before class attributes
             while (null !== ($prevIndex = $tokens->getPrevNonWhitespace($classIndex))) {
                 if ($tokens[$prevIndex]->getId() === CT::T_ATTRIBUTE_CLOSE) {
