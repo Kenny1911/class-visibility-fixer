@@ -595,6 +595,134 @@ final class ClassVisibilityFixerTest extends TestCase
         );
     }
 
+    public function testAnonymousClass()
+    {
+        $this->doTest(
+            <<<'PHP'
+            namespace Some\Namespace;
+
+            $a = new class {};
+            PHP,
+            <<<'PHP'
+            namespace Some\Namespace;
+
+            $a = new class {};
+            PHP,
+            [],
+        );
+    }
+
+    public function testManyAnonymousClasses()
+    {
+        $this->doTest(
+            <<<'PHP'
+            namespace Some\Namespace;
+
+            $a = new class {};
+            $b = new class {};
+            $c = new class {};
+            PHP,
+            <<<'PHP'
+            namespace Some\Namespace;
+
+            $a = new class {};
+            $b = new class {};
+            $c = new class {};
+            PHP,
+            [],
+        );
+    }
+
+    public function testAnonymousAndGeneralClassesShuffle(): void
+    {
+        $this->doTest(
+            <<<'PHP'
+            namespace Some\Namespace;
+
+            $a = new class {};
+            
+            /**
+             * @internal
+             * @psalm-internal Some\Namespace
+             */
+            final readonly class Foo {}
+            
+            $b = new class {};
+            
+            /**
+             * @internal
+             * @psalm-internal Some\Namespace
+             */
+            abstract class Bar {}
+            
+            $c = new class {};
+
+            /**
+             * @internal
+             * @psalm-internal Some\Namespace
+             */
+            class Baz {}
+            PHP,
+            <<<'PHP'
+            namespace Some\Namespace;
+
+            $a = new class {};
+            
+            final readonly class Foo {}
+            
+            $b = new class {};
+            
+            abstract class Bar {}
+            
+            $c = new class {};
+
+            class Baz {}
+            PHP,
+            [],
+        );
+    }
+
+    public function testAnonymousClassInClassMethod(): void
+    {
+        $this->doTest(
+            <<<'PHP'
+            namespace Some\Namespace;
+
+            /**
+             * @internal
+             * @psalm-internal Some\Namespace
+             */
+            final readonly class Foo
+            {
+                public function getStringable(): \Stringable {
+                    return new class implements \Stringable {
+                        public function __toString(): string
+                        {
+                            return 'Foo';
+                        }
+                    };
+                }
+            }
+            PHP,
+            <<<'PHP'
+            namespace Some\Namespace;
+
+            final readonly class Foo
+            {
+                public function getStringable(): \Stringable {
+                    return new class implements \Stringable {
+                        public function __toString(): string
+                        {
+                            return 'Foo';
+                        }
+                    };
+                }
+            }
+            PHP,
+            [],
+        );
+    }
+
     /**
      * @param non-empty-string $expected
      * @param non-empty-string $code
